@@ -481,7 +481,7 @@ function App() {
       </div>
     </div></header>
     <main className="main">{view}</main>
-    <footer className="foot"><div className="wrap">© {COMPANY.name} · Industrial spare parts & excess goods marketplace · Data stored in Google Sheets</div></footer>
+    <footer className="foot"><div className="wrap">© {COMPANY.name} · Industrial spare parts & excess goods marketplace ······ </div></footer>
     {auth && <AuthModal mode={auth} setMode={setAuth} onDone={done} close={() => setAuth(null)} />}
     <Bot />
     {toast && <div className={'toast' + (toast.err ? ' err' : '')}>{toast.m}</div>}
