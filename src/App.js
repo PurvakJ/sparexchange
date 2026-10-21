@@ -22,14 +22,92 @@ async function uploadImage(file) {
   const d = await r.json(); if (!r.ok) throw new Error((d.error && d.error.message) || 'Image upload failed');
   return d.secure_url;
 }
+
+/* ---------- NEW: Solutions & Resources menu data ---------- */
+// section = menu it belongs to, group = column inside the menu
+const mk = (section, group, slug, name, tag, icon, desc, points, extra) => Object.assign({ section, group, slug, name, tag, icon, desc, points: points || [] }, extra || {});
+const ITEMS = [
+  /* ---- SOLUTIONS > Product ---- */
+  mk('solutions', 'Product', 'global-spare-parts-search', 'Global Spare Parts Search', 'Stop searching, start finding', '🔎',
+    'Search with any information you have in any field: part numbers, descriptions, or other details to quickly find the exact part you need. No training required.',
+    ['Intuitive and forgiving free-text search', 'Search across 40M+ verified original manufacturer records', 'Find parts up to 60% faster', 'Insights from your internal and external network']),
+  mk('solutions', 'Product', 'automated-bom-check', 'Automated BOM Check', 'Identify what you have', '📋',
+    'Shorten spare parts list processing time and avoid duplicates by identifying the parts you already have, and create new materials with original material data.',
+    ['Automated spare parts list check instead of manual comparison', 'Processing time reduced by more than 50%', 'Avoid duplicates before they enter the system', 'New materials created with original manufacturer data']),
+  mk('solutions', 'Product', 'data-lifecycle-management', 'Data Lifecycle Management', 'Enrich and correct your data', '🗂️',
+    'Your path to MRO excellence starts with data. Deduplicate, enrich records with original manufacturer information and proactively manage discontinuations.',
+    ['Duplicate detection and prevention', 'Data enrichment with trusted manufacturer information', 'Obsolescence and discontinuation management', 'Multi-site data harmonization']),
+  mk('solutions', 'Product', 'material-creation-workflow', 'Digital Workflow', 'Standardize and govern your material data', '⚙️',
+    'Create, update, and optimize your material data through customized processes and AI recommendations.',
+    ['Material creation, change and extension workflow', 'Role-based approvals', 'Full activity timeline with discussions and approvals', 'Threaded discussions per material']),
+  mk('solutions', 'Product', 'inventory-optimizer', 'Inventory Optimizer', 'Reduce excess and improve availability', '📦',
+    'Right-size inventory across your plant network with recommended reorder points and min/max levels, grounded in actual consumption, lead times, and part criticality.',
+    ['Recommended reorder points and min/max levels', 'Based on actual consumption, lead times and part criticality', 'Works across your whole plant network', 'Reduce excess stock and improve availability'], { badge: 'Coming soon' }),
+  mk('solutions', 'Product', 'surplus-seller', 'Surplus Seller', 'Identify and sell your surplus at market rates', '💰',
+    'Turn excess and obsolete spare parts into cash at market rates. Vetted partners take on your entire surplus and handle the selling, while you track every part\'s progress in the app.',
+    ['Vetted partners take on your entire surplus', 'Sell at market rates', 'Track every part\'s progress in the app', 'Bring unused parts back into circulation'], { badge: 'Coming soon' }),
+  /* ---- SOLUTIONS > Use Cases ---- */
+  mk('solutions', 'Use Cases', 'mro-master-data-management', 'MRO Master Data Management', 'For Master Data Managers', '🧱',
+    '“We have processes in place, but they don\'t really work. Messy data, legacy systems, and so much manual work just to keep things running.” Stop workarounds and implement processes that scale.',
+    ['Standardized, verified material records', 'Governed creation, change and extension workflow', 'One source of truth for every plant', 'Less manual work, fewer legacy workarounds']),
+  mk('solutions', 'Use Cases', 'inventory-optimization', 'MRO Inventory Optimization', 'For Operations & Maintenance leaders', '📊',
+    '“Our inventory is bloated with duplicate and unused parts and yet when equipment fails, it\'s still a struggle to find the right spare.” Clean up spare parts data, bring clarity and control to your inventory, improve free cash flow, ensure uptime and align every site.',
+    ['About 20% average inventory reduction', 'Eliminate duplicates and obsolescence', 'Standardize parts globally', 'Align every site on one process']),
+  mk('solutions', 'Use Cases', 'mro-procurement', 'MRO Sourcing Optimization', 'For Procurement leaders', '🛒',
+    '“We have been buying the same part from different suppliers at different prices.” Enable strategic procurement with better market visibility and reliable data.',
+    ['Identify OEMs and alternative suppliers', 'Cross-site inventory visibility', 'Reliable data for negotiation', 'Network-wide sourcing']),
+  mk('solutions', 'Use Cases', 'solving-industrial-surplus', 'Solving Industrial Surplus', 'Turn dead stock into value', '♻️',
+    'Excess and obsolete spare parts tie up working capital and storage space. Find buyers for surplus and bring unused parts back into circulation.',
+    ['Identify surplus and obsolete stock', 'List with photos, quantity, condition and price', 'Bid, negotiate and close the deal in chat', 'Free up working capital'], { badge: 'NEW' }),
+  /* ---- SOLUTIONS > Technical ---- */
+  mk('solutions', 'Technical', 'api', 'Data exchange', 'Connect your systems', '🔌',
+    'Connects to any ERP or CMMS. No migration required. Your ERP stays the source of truth, the platform adds the intelligence layer on top.',
+    ['Connects to any ERP or CMMS, no migration required', 'Official SAP partner with deep integration support', 'API available for custom workflows and data syncs', 'Connects to SAP, IBM Maximo and more']),
+  mk('solutions', 'Technical', 'security-and-compliance', 'Security & Compliance', 'SOC2 Type II independently attested', '🛡️',
+    'Security and compliance built in, with SOC2 Type II independent attestation, so your spare parts data stays protected.',
+    ['SOC2 Type II independently attested', 'Role-based access and approvals', 'Full traceability of every material change', 'Admin moderation of users and listings']),
+  /* ---- RESOURCES > Discover ---- */
+  mk('resources', 'Discover', 'blog', 'Blog', 'Ideas for smarter spare parts management', '💡',
+    'Practical articles on MRO data, inventory, sourcing and surplus.',
+    ['MRO master data best practices', 'Reducing duplicate and obsolete inventory', 'Smarter sourcing of spare parts', 'Selling surplus the right way']),
+  mk('resources', 'Discover', 'faqs', 'FAQs', 'Quick answers', '❓',
+    'Answers to the most common questions about listing, buying, bidding and closing deals.', [],
+    { faq: [['How do I post goods?', 'Sign in, open Post goods, choose the product type, fill the guided form, add photos and publish.'],
+      ['Can I see prices without an account?', 'Visitors see limited details. Register for free to see price, seller phone, location and full specifications.'],
+      ['How does bidding work?', 'Buy at the asking price or place your own bid. The seller can accept or decline and you can chat to negotiate.'],
+      ['How do I close a deal?', 'Once the seller accepts a bid, or you buy now, the deal is recorded in Orders with buyer and seller details.'],
+      ['Can I pause or edit a listing?', 'Yes. Open My listings to edit, pause, resume or delete any of your listings.']] }),
+  /* ---- RESOURCES > Research ---- */
+  mk('resources', 'Research', 'whitepapers', 'Whitepapers', 'In-depth research', '📑',
+    'In-depth guides on building a reliable MRO data foundation.',
+    ['Material master data standardization', 'Duplicate prevention at scale', 'Obsolescence management', 'Multi-site harmonization']),
+  mk('resources', 'Research', 'reports', 'Reports', 'Industry benchmarks', '📈',
+    'Benchmark your inventory and visibility against 362 manufacturing peers and see which value drivers most affect spend, productivity, and working capital.',
+    ['Report: Unlocking cost savings in spare parts management', 'Benchmark of 362 manufacturing peers', 'Value drivers for spend, productivity and working capital']),
+  /* ---- RESOURCES > Connect ---- */
+  mk('resources', 'Connect', 'events', 'Events', 'Meet the team', '📅',
+    'Trade fairs, conferences and community meetups. Event announcements will appear here.',
+    ['Industry trade fairs', 'Maintenance and MRO conferences', 'Customer and partner meetups']),
+  mk('resources', 'Connect', 'webinars', 'Webinars', 'Learn live or on demand', '🎥',
+    'Live sessions and recordings on spare parts data, inventory and surplus. Webinar announcements will appear here.',
+    ['Live product walkthroughs', 'Customer success stories', 'Q&A with experts'])
+];
+const INFO = {}; ITEMS.forEach(i => { INFO[i.slug] = i; });
+const MENUS = [
+  { key: 'solutions', label: 'Solutions', groups: ['Product', 'Use Cases', 'Technical'] },
+  { key: 'resources', label: 'Resources', groups: ['Discover', 'Research', 'Connect'] }
+];
+
 const PATHS = { home: '/', market: '/marketplace', post: '/post', mine: '/my-listings', messages: '/messages', orders: '/orders', dash: '/admin', users: '/admin/users', forms: '/admin/forms' };
 const routeFromPath = p => {
   p = (p || '/').replace(/\/+$/, '') || '/';
   let m = p.match(/^\/marketplace\/([^/]+)$/); if (m) return { page: 'item', id: decodeURIComponent(m[1]) };
   m = p.match(/^\/edit\/([^/]+)$/); if (m) return { page: 'edit', id: decodeURIComponent(m[1]) };
+  m = p.match(/^\/(solutions|resources)\/([^/]+)$/); if (m) return { page: 'info', id: decodeURIComponent(m[2]) };
   return { page: Object.keys(PATHS).find(k => PATHS[k] === p) || 'home', id: '' };
 };
-const pathFor = (p, id) => p === 'item' ? '/marketplace/' + encodeURIComponent(id) : p === 'edit' ? '/edit/' + encodeURIComponent(id) : PATHS[p];
+const pathFor = (p, id) => p === 'item' ? '/marketplace/' + encodeURIComponent(id) : p === 'edit' ? '/edit/' + encodeURIComponent(id)
+  : p === 'info' ? '/' + (INFO[id] ? INFO[id].section : 'solutions') + '/' + encodeURIComponent(id) : PATHS[p];
 const inGS = () => !!(window.google && window.google.script && window.google.script.run);
 let TOKEN = ''; try { TOKEN = localStorage.getItem('sx') || ''; } catch (e) {}
 const setTok = t => { TOKEN = t; try { t ? localStorage.setItem('sx', t) : localStorage.removeItem('sx'); } catch (e) {} };
@@ -160,16 +238,61 @@ function Home({ user, go, openAuth }) {
     </div></section>
     <section className="sec alt"><div className="wrap"><h2>Why {COMPANY.name}</h2><div className="line" />
       <div className="grid">{feats.map(f => <div className="feat" key={f[1]}><i>{f[0]}</i><h4>{f[1]}</h4><p>{f[2]}</p></div>)}</div></div></section>
-    <section className="sec"><div className="wrap"><h2>How it works</h2><div className="line" />
+    {/* NEW: solutions overview on Home */}
+    <section className="sec"><div className="wrap"><h2>Our solutions</h2><div className="line" />
+      <div className="grid">{ITEMS.filter(i => i.section === 'solutions' && i.group === 'Product').map(i =>
+        <div className="feat lnk" key={i.slug} onClick={() => go('info', i.slug)}><i>{i.icon}</i><h4>{i.name}{i.badge && <span className="chip new" style={{ marginLeft: 8 }}>{i.badge}</span>}</h4><p>{i.tag}</p></div>)}</div></div></section>
+    <section className="sec alt"><div className="wrap"><h2>How it works</h2><div className="line" />
       <div className="steps">{[['01', 'Post', 'Choose the product type, fill the guided form, add photos and publish.'], ['02', 'Discover & bid', 'Browse listings, buy at the asking price or place your own bid.'], ['03', 'Chat & close', 'Negotiate in the chat, accept a bid and arrange pickup.']].map(x =>
         <div className="step" key={x[0]}><i>{x[0]}</i><h3>{x[1]}</h3><p style={{ color: 'var(--mut)' }}>{x[2]}</p></div>)}</div></div></section>
-    <section className="sec alt"><div className="wrap"><h2>Industries & parts we serve</h2><div className="line" />
+    <section className="sec"><div className="wrap"><h2>Industries & parts we serve</h2><div className="line" />
       <div className="chips">{['Electric motors', 'PLC & automation', 'Pumps & valves', 'Bearings & gears', 'Televisions & displays', 'Conveyors', 'Hydraulics', 'Sensors', 'Cables & switchgear'].map(c => <span className="chip" key={c}>{c}</span>)}</div></div></section>
-    <section className="sec"><div className="wrap"><h2>Contact us</h2><div className="line" />
+    <section className="sec alt"><div className="wrap"><h2>Contact us</h2><div className="line" />
       <div className="contact"><div className="feat"><i>✉️</i><b>Email</b><p>{COMPANY.email}</p></div><div className="feat"><i>📞</i><b>Phone</b><p>{COMPANY.phone}</p></div><div className="feat"><i>📍</i><b>Address</b><p>{COMPANY.address}</p></div></div></div></section>
     <section className="cta"><h2 style={{ color: '#fff' }}>Ready to move your excess stock?</h2><p>Join the marketplace and list your first item in minutes.</p>
       <button className="btn pur" onClick={() => user ? go('post') : openAuth('register')}>{user ? 'Post goods' : 'Get started'}</button></section>
   </>);
+}
+
+/* ---------- NEW: Solutions / Resources detail page ---------- */
+function Info({ id, go, user, openAuth }) {
+  const it = INFO[id];
+  if (!it) return <div className="page"><div className="wrap"><button className="btn ghost sm" onClick={() => go('home')}>← Back to home</button><div className="empty">Page not found.</div></div></div>;
+  const menu = MENUS.find(m => m.key === it.section);
+  const rel = ITEMS.filter(x => x.section === it.section && x.slug !== it.slug && (x.group === it.group || it.section === 'resources'));
+  return (<div className="page"><div className="wrap">
+    <button className="btn ghost sm" onClick={() => go('home')}>← Back to home</button>
+    <div className="ihero">
+      <div><span className="chip">{menu.label}</span><span className="chip new">{it.group}</span>{it.badge && <span className="chip warn">{it.badge}</span>}</div>
+      <h2>{it.icon} {it.name}</h2>
+      <div className="itag">{it.tag}</div><div className="line" style={{ margin: '14px 0' }} />
+      <p className="idesc">{it.desc}</p>
+      <div className="row" style={{ marginTop: 18 }}>
+        <button className="btn pur" onClick={() => go('market')}>Browse marketplace</button>
+        {user ? <button className="btn ghost" onClick={() => go('post')}>Post goods</button>
+          : <button className="btn ghost" onClick={() => openAuth('register')}>Create free account</button>}
+      </div>
+    </div>
+    {it.points.length > 0 && <><h3 style={{ margin: '28px 0 14px' }}>{it.section === 'resources' ? 'What you will find' : 'Key capabilities'}</h3>
+      <div className="grid">{it.points.map(p => <div className="feat" key={p}><b>✔ {p}</b></div>)}</div></>}
+    {it.faq && <div className="panel" style={{ marginTop: 20 }}>{it.faq.map(q => <details className="faq" key={q[0]}><summary>{q[0]}</summary><p>{q[1]}</p></details>)}</div>}
+    {rel.length > 0 && <><h3 style={{ margin: '34px 0 14px' }}>{it.section === 'resources' ? 'More resources' : 'Related in ' + it.group}</h3>
+      <div className="grid">{rel.map(r => <div className="feat lnk" key={r.slug} onClick={() => go('info', r.slug)}><i>{r.icon}</i><h4>{r.name}{r.badge && <span className="chip new" style={{ marginLeft: 8 }}>{r.badge}</span>}</h4><p>{r.tag}</p></div>)}</div></>}
+  </div></div>);
+}
+
+/* ---------- NEW: header dropdown menu (Solutions / Resources) ---------- */
+function NavMenu({ m, open, setOpen, active, go }) {
+  return (<div className={'mm' + (open ? ' open' : '')}>
+    <button className={'mm-btn' + (active ? ' on' : '')} aria-expanded={open} onClick={e => { e.stopPropagation(); setOpen(open ? '' : m.key); }}>{m.label} <span className="caret">▾</span></button>
+    {open && <div className="mega" onClick={e => e.stopPropagation()}>
+      {m.groups.map(g => <div className="mcol" key={g}><h5>{g}</h5>
+        {ITEMS.filter(i => i.section === m.key && i.group === g).map(i =>
+          <button className="mi" key={i.slug} onClick={() => go('info', i.slug)}>
+            <span className="mi-ic">{i.icon}</span>
+            <span><b>{i.name}{i.badge && <span className="pill">{i.badge}</span>}</b><small>{i.tag}</small></span></button>)}</div>)}
+    </div>}
+  </div>);
 }
 
 /* ---------- Marketplace for visitors (no login: limited data) ---------- */
@@ -446,18 +569,19 @@ function Bot() {
 /* ---------- App shell ---------- */
 function App() {
   const [user, setUser] = useState(null), [thread, setThread] = useState(null), [auth, setAuth] = useState(null),
-    [toast, setToast] = useState(null), [boot, setBoot] = useState(!!TOKEN), [menu, setMenu] = useState(false),
+    [toast, setToast] = useState(null), [boot, setBoot] = useState(!!TOKEN), [menu, setMenu] = useState(false), [dd, setDd] = useState(''),
     [route, setRoute] = useState(() => { try { return inGS() ? { page: 'home', id: '' } : routeFromPath(window.location.pathname); } catch (e) { return { page: 'home', id: '' }; } }),
     pending = useRef(null), page = route.page;
   window.notify = (m, err) => { setToast({ m, err }); setTimeout(() => setToast(null), 3200); };
   const go = (p, id) => {
-    setRoute({ page: p, id: id || '' }); setMenu(false); window.scrollTo(0, 0);
+    setRoute({ page: p, id: id || '' }); setMenu(false); setDd(''); window.scrollTo(0, 0);
     try { const path = pathFor(p, id); if (!inGS() && window.location.pathname !== path) window.history.pushState({}, '', path); } catch (e) {}
   };
   useEffect(() => { const f = () => setRoute(routeFromPath(window.location.pathname)); window.addEventListener('popstate', f); return () => window.removeEventListener('popstate', f); }, []);
+  useEffect(() => { const f = () => setDd(''); document.addEventListener('click', f); return () => document.removeEventListener('click', f); }, []);
   useEffect(() => { const f = () => { setUser(null); setThread(null); setAuth('login'); go('home'); note('Please sign in again.', true); }; window.addEventListener('sx-logout', f); return () => window.removeEventListener('sx-logout', f); }, []);
   useEffect(() => { if (TOKEN) call('me').then(u => { setUser(u); }).catch(e => { if (/^(Session|Account)/.test(e.message)) setTok(''); }).finally(() => setBoot(false)); }, []);
-  useEffect(() => { if (!boot && !user && page !== 'home' && page !== 'market') { pending.current = route; setAuth('login'); go('home'); } }, [boot, user, page]);
+  useEffect(() => { if (!boot && !user && page !== 'home' && page !== 'market' && page !== 'info') { pending.current = route; setAuth('login'); go('home'); } }, [boot, user, page]);
   const done = r => { setTok(r.token); setUser(r.user); setAuth(null); const p = pending.current; pending.current = null; p ? go(p.page, p.id) : go('market'); note('Welcome, ' + r.user.name); };
   const out = () => { call('logout').catch(() => {}); setTok(''); setUser(null); setThread(null); go('home'); };
   const openChat = t => { setThread(t); go('messages'); };
@@ -467,18 +591,25 @@ function App() {
   const tabs = [['home', 'Home'], ['market', 'Marketplace']].concat(!user ? [] : [['post', 'Post goods'], ['mine', 'My listings'], ['messages', 'Messages & bids'], ['orders', 'Orders']]
     .concat(admin ? [['dash', 'Dashboard'], ['users', 'Users'], ['forms', 'Form builder']] : []));
   const on = k => page === k || (k === 'market' && page === 'item') || (k === 'mine' && page === 'edit');
-  const view = !user ? (page === 'market' ? <PublicMarket openAuth={setAuth} /> : <Home user={null} go={go} openAuth={setAuth} />) : {
+  const infoSection = page === 'info' && INFO[route.id] ? INFO[route.id].section : '';
+  const tabBtn = t => <button key={t[0]} className={on(t[0]) ? 'on' : ''} onClick={() => go(t[0])}>{t[1]}</button>;
+  const view = !user ? (page === 'market' ? <PublicMarket openAuth={setAuth} /> : page === 'info' ? <Info id={route.id} go={go} user={null} openAuth={setAuth} /> : <Home user={null} go={go} openAuth={setAuth} />) : {
     home: <Home user={user} go={go} openAuth={setAuth} />, market: <Market user={user} openChat={openChat} open={openItem} />,
     item: <Item key={route.id} id={route.id} user={user} go={go} openChat={openChat} />, edit: <Post key={'e' + route.id} go={go} editId={route.id} />,
+    info: <Info id={route.id} go={go} user={user} openAuth={setAuth} />,
     post: <Post key="new" go={go} />, mine: <Mine openChat={openChat} go={go} />,
     messages: <Messages thread={thread} setThread={setThread} />, orders: <Orders />, dash: <Dash />, users: <Users />, forms: <Builder />
   }[page];
   return (<div className="app-shell">
     <header className="hdr"><div className="wrap">
       <div className="logo" onClick={() => go('home')}>SPARE<b>XCHANGE</b></div>
-      <button className="burger" aria-label="Menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>{menu ? '✕' : '☰'}</button>
+      <button className="burger" aria-label="Menu" aria-expanded={menu} onClick={e => { e.stopPropagation(); setMenu(!menu); }}>{menu ? '✕' : '☰'}</button>
       <div className={'menu' + (menu ? ' open' : '')}>
-        <nav className="nav">{tabs.map(t => <button key={t[0]} className={on(t[0]) ? 'on' : ''} onClick={() => go(t[0])}>{t[1]}</button>)}</nav>
+        <nav className="nav">
+          {tabs.slice(0, 1).map(tabBtn)}
+          {MENUS.map(m => <NavMenu key={m.key} m={m} open={dd === m.key} setOpen={setDd} active={infoSection === m.key} go={go} />)}
+          {tabs.slice(1).map(tabBtn)}
+        </nav>
         <div className="acts">
           {user ? <><div className="who"><b>{user.name}</b> {admin && <span className="pill">admin</span>}<br />{user.company || user.email}</div><button className="btn ghost sm" onClick={out}>Sign out</button></>
             : <><button className="btn ghost sm" onClick={() => { setMenu(false); setAuth('login'); }}>Sign in</button><button className="btn sm" onClick={() => { setMenu(false); setAuth('register'); }}>Register</button></>}

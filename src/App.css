@@ -313,3 +313,95 @@ label{text-transform:uppercase;letter-spacing:.4px;font-size:11px}
 .item .fb{border:0!important}
 .item>.card>*:not(.kv){padding-left:0!important;padding-right:0!important}
 .item>.card>.chip,.item>.card>div>.chip{margin-left:0!important}
+
+/* =========================================================
+   NEW: Solutions / Resources dropdown menus + info pages
+   ========================================================= */
+.mm-btn .caret{font-size:10px;margin-left:2px;display:inline-block;transition:transform .2s}
+.mm.open .mm-btn .caret{transform:rotate(180deg)}
+.mm.open .mm-btn{background:var(--mint);color:var(--teal);font-weight:600}
+/* desktop mega menu (fixed so the scrolling nav never clips it) */
+.mega{position:fixed;top:68px;left:50%;transform:translateX(-50%);width:min(1040px,calc(100vw - 30px));background:#fff;border:1px solid var(--line);border-top:3px solid var(--purple);border-radius:0 0 16px 16px;box-shadow:0 24px 50px rgba(16,39,50,.18);padding:22px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:26px;z-index:30;max-height:calc(100vh - 90px);overflow-y:auto}
+.mcol h5{margin:0 0 10px;font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.6px}
+.nav .mega .mi{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;white-space:normal;padding:10px;border-radius:10px;border:0;background:none;cursor:pointer;font-weight:400}
+.nav .mega .mi:hover{background:var(--mint)}
+.mi-ic{width:36px;height:36px;flex:none;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px}
+.nav .mega .mi b{display:block;font-size:13px;color:var(--navy);font-weight:600}
+.nav .mega .mi small{display:block;font-size:12px;color:var(--mut);margin-top:1px;line-height:1.35}
+.nav .mega .mi .pill{margin-left:6px;font-size:10px;padding:1px 7px}
+/* mobile accordion (matches the hamburger menu) */
+@media(max-width:900px){
+  .mm{width:100%}
+  .nav .mm-btn{display:flex;justify-content:space-between;align-items:center}
+  .mega{position:static;transform:none;width:100%;max-height:none;overflow:visible;box-shadow:none;border:0;border-left:3px solid var(--mint);border-radius:0;padding:4px 0 8px 12px;margin:2px 0 6px;grid-template-columns:1fr;gap:10px}
+  .nav .mega .mi{padding:8px}
+}
+/* info pages */
+.ihero{background:#fff;border:1px solid var(--line);border-radius:20px;padding:34px;margin-top:20px;box-shadow:0 12px 34px rgba(16,39,50,.08)}
+.ihero h2{font-size:34px;color:var(--navy);margin:12px 0 4px}
+.itag{color:var(--teal);font-weight:600;font-size:16px}
+.idesc{max-width:760px;color:var(--mut);font-size:16px;line-height:1.7;margin:0}
+.page .feat.lnk:hover{box-shadow:0 12px 28px rgba(16,39,50,.12);transform:translateY(-3px)}
+.page .feat{transition:transform .2s,box-shadow .2s}
+.faq{border-bottom:1px solid var(--line);padding:14px 0}
+.faq:last-child{border-bottom:0}
+.faq summary{cursor:pointer;font-weight:600;color:var(--navy)}
+.faq p{margin:10px 0 0;color:var(--mut);line-height:1.7}
+@media(max-width:900px){.ihero{padding:22px}.ihero h2{font-size:26px}}
+
+/* =========================================================
+   FIX: long menu must scroll when it is taller than the screen
+   ========================================================= */
+@media(max-width:900px){
+  .menu{
+    max-height:calc(100vh - 68px);
+    max-height:calc(100dvh - 68px);
+    
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+    scrollbar-color:var(--teal) var(--mint);
+    padding-bottom:28px;
+  }
+  .menu::-webkit-scrollbar{width:6px}
+  .menu::-webkit-scrollbar-track{background:var(--mint);border-radius:6px}
+  .menu::-webkit-scrollbar-thumb{background:var(--teal);border-radius:6px}
+}
+
+
+/* desktop: if there are more tabs than fit (e.g. admin), the tab bar scrolls sideways */
+@media(min-width:901px){
+  .nav{scrollbar-width:thin;scrollbar-color:var(--teal) transparent;padding-bottom:2px}
+  .nav::-webkit-scrollbar{height:5px}
+  .nav::-webkit-scrollbar-thumb{background:var(--teal);border-radius:5px}
+}
+
+/* =========================================================
+   FIX: wider header so the navbar never needs a slider
+   ========================================================= */
+@media(min-width:901px){
+  .hdr .wrap{max-width:1200px;gap:16px}
+  .logo{flex:none}
+  .menu{gap:12px}
+  .nav{gap:2px;overflow:visible;padding-bottom:0}
+  .nav button{padding:8px 10px}
+  .acts{flex:none}
+  .who{max-width:190px;overflow:hidden;text-overflow:ellipsis}
+}
+/* very wide tab sets (admin): tighten a little instead of scrolling */
+@media(min-width:901px) and (max-width:1500px){
+  .nav button{padding:8px 7px;font-size:12.5px}
+  .who{display:none}
+}
+
+@media(max-width:1020px){
+  .burger{display:block}
+  .menu{display:none;position:absolute;top:68px;left:0;right:0;background:#fff;flex-direction:column;align-items:stretch;gap:12px;padding:14px 20px 18px;border-bottom:1px solid var(--line);box-shadow:0 14px 24px rgba(16,39,50,.12)}
+  .menu.open{display:flex}
+  .nav{flex-direction:column;overflow:visible;gap:2px}
+  .nav button{text-align:left;padding:12px;font-size:15px;width:100%}
+  .acts{border-top:1px solid var(--line);padding-top:12px;justify-content:space-between}
+  .who{display:block;text-align:left}
+}
