@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://script.google.com/macros/s/AKfycbwKZ4YqygYom0ATZ85E7lskWIF9vJTtuzDo1DQAubB_9Yr9wcvkdrUFTe0huKkTWEIukw/exec';
+const API_URL = process.env.REACT_APP_API_URL || 'https://script.google.com/macros/s/AKfycbxDtXUJk4HQ5nyP55C3C9QE0WeoRmPJW05gd2J60DZdyqhRTab6MZsAN0hKlfZAhoCkJA/exec';
 const CUR = '₹';
 // Edit these company details shown on the Home page
 const COMPANY = { name: 'SpareXchange', email: 'support@sparexchange.com', phone: '+91 00000 00000', address: 'Your company address, City, State, India' };
@@ -31,9 +31,9 @@ const routeFromPath = p => {
 };
 const pathFor = (p, id) => p === 'item' ? '/marketplace/' + encodeURIComponent(id) : p === 'edit' ? '/edit/' + encodeURIComponent(id) : PATHS[p];
 const inGS = () => !!(window.google && window.google.script && window.google.script.run);
-let TOKEN = ''; try { TOKEN = sessionStorage.getItem('sx') || ''; } catch (e) {}
-const setTok = t => { TOKEN = t; try { t ? sessionStorage.setItem('sx', t) : sessionStorage.removeItem('sx'); } catch (e) {} };
-const call = (action, payload) => {
+let TOKEN = ''; try { TOKEN = localStorage.getItem('sx') || ''; } catch (e) {}
+const setTok = t => { TOKEN = t; try { t ? localStorage.setItem('sx', t) : localStorage.removeItem('sx'); } catch (e) {} };
+const rawCall = (action, payload) => {
   const gs = window.google && window.google.script && window.google.script.run;
   if (gs) { // running inside Apps Script
     return new Promise((res, rej) => gs.withSuccessHandler(r => r && r.ok ? res(r.data) : rej(new Error(r ? r.error : 'No response')))
@@ -44,6 +44,10 @@ const call = (action, payload) => {
     body: JSON.stringify({ action, payload: payload || {}, token: TOKEN }) })
     .then(r => r.json()).then(r => { if (r && r.ok) return r.data; throw new Error(r ? r.error : 'No response'); });
 };
+const call = (a, p) => rawCall(a, p).catch(e => { // only a real invalid/removed session signs the user out
+  if (/^Session expired/.test(e.message)) { setTok(''); window.dispatchEvent(new Event('sx-logout')); }
+  throw e;
+});
 const money = n => CUR + Number(n || 0).toLocaleString('en-IN');
 const when = t => new Date(Number(t)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const hm = t => new Date(Number(t)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -451,7 +455,8 @@ function App() {
     try { const path = pathFor(p, id); if (!inGS() && window.location.pathname !== path) window.history.pushState({}, '', path); } catch (e) {}
   };
   useEffect(() => { const f = () => setRoute(routeFromPath(window.location.pathname)); window.addEventListener('popstate', f); return () => window.removeEventListener('popstate', f); }, []);
-  useEffect(() => { if (TOKEN) call('me').then(u => { setUser(u); }).catch(() => setTok('')).finally(() => setBoot(false)); }, []);
+  useEffect(() => { const f = () => { setUser(null); setThread(null); setAuth('login'); go('home'); note('Please sign in again.', true); }; window.addEventListener('sx-logout', f); return () => window.removeEventListener('sx-logout', f); }, []);
+  useEffect(() => { if (TOKEN) call('me').then(u => { setUser(u); }).catch(e => { if (/^(Session|Account)/.test(e.message)) setTok(''); }).finally(() => setBoot(false)); }, []);
   useEffect(() => { if (!boot && !user && page !== 'home' && page !== 'market') { pending.current = route; setAuth('login'); go('home'); } }, [boot, user, page]);
   const done = r => { setTok(r.token); setUser(r.user); setAuth(null); const p = pending.current; pending.current = null; p ? go(p.page, p.id) : go('market'); note('Welcome, ' + r.user.name); };
   const out = () => { call('logout').catch(() => {}); setTok(''); setUser(null); setThread(null); go('home'); };
@@ -481,7 +486,7 @@ function App() {
       </div>
     </div></header>
     <main className="main">{view}</main>
-    <footer className="foot"><div className="wrap">© {COMPANY.name} · Industrial spare parts & excess goods marketplace ······ </div></footer>
+    <footer className="foot"><div className="wrap">© {COMPANY.name} · Industrial spare parts & excess goods marketplace · Data stored in Google Sheets</div></footer>
     {auth && <AuthModal mode={auth} setMode={setAuth} onDone={done} close={() => setAuth(null)} />}
     <Bot />
     {toast && <div className={'toast' + (toast.err ? ' err' : '')}>{toast.m}</div>}
