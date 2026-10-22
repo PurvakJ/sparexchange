@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import './App.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://script.google.com/macros/s/AKfycbyHLGkC-mdXWSRXxl_nnLOj7l1hqus3fFA-cd4_HKcH2_Z3_cdefVzG49y03tYeDFcvyQ/exec';
+const API_URL = process.env.REACT_APP_API_URL || 'https://script.google.com/macros/s/AKfycbzA0UOLsCd4GNc-vEL3x8mk3WUSwPepocY0wnCCAsoKSU8dW87rjuCO3fwDO06Cx_42AQ/exec';
 const CUR = '₹';
 const COMPANY = { name: 'SpareXchange', email: 'support@sparexchange.com' };
 const DEV = { name: 'Shree Shyam IT Solutions', email: 'itsolutionsshreeshyam@gmail.com', site: 'https://shree-shyam-it-solutions.vercel.app/' };
@@ -58,8 +58,8 @@ const ITEMS = [
     'Send a buy request at the asking price or place your own bid. The seller reviews every request and closes the deal.',
     ['Buy now sends a request to the seller at the listed price', 'Place your own bid on any listing', 'Seller accepts or declines each request and bid', 'Track the status of your bids']),
   mk('solutions', 'Product', 'chat-and-negotiate', 'Chat & Negotiate', 'Talk directly to buyers and sellers', '💬',
-    'Every listing has its own conversation between buyer and seller, so you can ask questions and agree on the price without leaving the platform.',
-    ['One conversation per listing and buyer', 'Bid updates appear inside the chat', 'Notification when a new message arrives', 'Quick answers from the built-in assistant']),
+    'Chat with any buyer or seller in one WhatsApp-style conversation. Questions about different listings stay together in the same chat, so you can agree on the price without leaving the platform.',
+    ['One conversation per person, across all listings', 'Unread message count on every chat', 'Bid updates appear inside the chat', 'Notification when a new message arrives', 'Quick answers from the built-in assistant']),
   mk('solutions', 'Product', 'orders-and-deals', 'Orders & Deals', 'Every deal on record', '🧾',
     'Once the seller accepts a bid or buy request, the deal is saved in Orders with buyer and seller details and the final amount.',
     ['Automatic order record for every closed deal', 'Buyer and seller contact details', 'Final amount and date', 'Separate view for what you bought and sold']),
@@ -96,6 +96,7 @@ const ITEMS = [
       ['What happens when I press Buy now?', 'A buy request at the posted price is sent to the seller as a message. The seller then confirms and closes the deal.'],
       ['How does bidding work?', 'Place your own bid. The seller can accept or decline and you can chat to negotiate.'],
       ['How do I close a deal?', 'The seller accepts your bid or buy request from My listings. The deal is then recorded in Orders with buyer and seller details.'],
+      ['How do chats work?', 'Every person you talk to has one chat, even if you discuss several listings. Unread messages are counted on the chat and on the Messages button until you open the chat.'],
       ['Will I be notified of new messages?', 'Yes. Allow notifications when asked and you will get a new message alert on desktop and mobile while SpareXchange is open in your browser.'],
       ['Can I pause or edit a listing?', 'Yes. Open My listings to edit, pause, resume or delete any of your listings.']] }),
   /* ---- RESOURCES > Guides ---- */
@@ -148,23 +149,23 @@ const IMG = {
 
 const STATS = [['Free', 'Registration for everyone', 'Create an account at no cost and unlock prices, seller contacts and full specifications'],
   ['8', 'Photos per listing', 'Show your goods clearly with up to eight photos and a full-screen gallery'],
-  ['1-to-1', 'Chat with every buyer or seller', 'Negotiate directly on each listing and close the deal in one place']];
+  ['1-to-1', 'Chat with every buyer or seller', 'Negotiate directly with each person and close the deal in one place']];
 const ROLES = [[PH.factory, 'Plant & Factory Owner', '“We have idle machines, motors and spare parts sitting in the store, and no easy way to find buyers.”', 'Post your surplus and turn idle stock into cash.', 'for-plants'],
   [PH.engineer, 'Maintenance & Procurement', '“When equipment stops, we need the right part quickly and at a fair price.”', 'Search listings, compare offers and buy or bid.', 'for-buyers'],
   [PH.warehouse, 'Business Owner & Trader', '“Unused goods tie up our money and space.”', 'List, negotiate and clear dead stock faster.', 'for-owners']];
 const STEPS = [['Post', 'Sign in, choose single or bulk, fill in the guided form or import your file, add photos and publish your listing.', PH.warehouse],
   ['Browse & bid', 'Buyers search by part, model or category, then send a buy request at the asking price or place their own bid.', PH.search],
-  ['Chat & negotiate', 'Buyer and seller talk directly in a chat for each listing. Bid updates appear in the conversation and new messages trigger a notification.', PH.meeting],
+  ['Chat & negotiate', 'Buyer and seller talk directly in one chat. Bid updates appear in the conversation, unread messages are counted and new messages trigger a notification.', PH.meeting],
   ['Close the deal', 'The seller accepts the bid or buy request, and the deal is recorded in Orders with buyer and seller details.', PH.contract]];
 const COMPARE = [['Listing & discovery', [['Photos, quantity, condition and price on every listing', 'Always included', 'Often missing'], ['Search and category filters', 'Built in', 'Manual calls and messages'], ['Post one item or thousands in bulk', 'Guided forms and file import', 'Free-form ads']]],
-  ['Negotiation & deals', [['Bids with accept or decline', 'Built in', 'Phone calls only'], ['Chat for every listing', 'Built in with alerts', 'Scattered chats and emails'], ['Deal record with buyer and seller details', 'Automatic in Orders', 'Manual notes']]],
+  ['Negotiation & deals', [['Bids with accept or decline', 'Built in', 'Phone calls only'], ['One chat per person with unread counts', 'Built in with alerts', 'Scattered chats and emails'], ['Deal record with buyer and seller details', 'Automatic in Orders', 'Manual notes']]],
   ['Control & trust', [['Edit, pause or delete listings', 'Any time', 'Not possible'], ['Admin moderation of users and listings', 'Included', 'None']]]];
 
 /* ---------- Legal pages ---------- */
 const LEGAL = {
   privacy: { title: 'Privacy Policy', intro: 'This policy explains what information ' + COMPANY.name + ' collects, how we use it and the choices you have.',
     sections: [
-      ['Information we collect', 'When you register we collect your name, email, phone number and location. If you tell us you are an authorised dealer we also collect your company name. When you use the platform we also store the listings you post, photos you upload, bids, buy requests, chat messages and the deals you close.'],
+      ['Information we collect', 'When you register we collect your name, email, phone number and location. If you tell us you are an authorised dealer we also collect your company name. When you use the platform we also store the listings you post, photos you upload, bids, buy requests, chat messages (including whether and when they were read) and the deals you close.'],
       ['How we use your information', 'We use your information to create and secure your account, show your listings to buyers, connect buyers and sellers, notify you of new messages, record deals in Orders, answer support requests and keep the marketplace safe.'],
       ['What other members can see', 'Visitors who are not signed in see limited listing details. Signed-in members can see the seller’s name, company, phone, email and location on a listing, and the buyer and seller details on a closed deal.'],
       ['Photos and storage', 'Photos you upload are stored with our image hosting provider and shown on your listings. Please do not upload images that contain personal or confidential information.'],
@@ -175,7 +176,7 @@ const LEGAL = {
       ['Contact', 'Questions about privacy? Email ' + COMPANY.email + '.']] },
   cookies: { title: 'Cookie Policy', intro: 'This policy explains how ' + COMPANY.name + ' uses cookies and similar browser storage.',
     sections: [
-      ['What we store', 'We use your browser’s local storage to keep you signed in and to remember which messages you have already seen. The session token is removed when you sign out.'],
+      ['What we store', 'We use your browser’s local storage to keep you signed in and to remember which messages we have already alerted you about. The session token is removed when you sign out.'],
       ['Essential storage', 'The session token is needed for sign-in, posting goods, bidding and chat to work. Without it, those features cannot function.'],
       ['Notifications', 'If you allow notifications in your browser, we use them only to tell you that a new message has arrived. You can turn them off in your browser settings at any time.'],
       ['Third-party content', 'Photos are loaded from our image hosting provider and pages may load fonts from external providers. These providers may receive technical information such as your IP address.'],
@@ -230,6 +231,11 @@ const call = (a, p) => rawCall(a, p).catch(e => { // only a real invalid/removed
 const money = n => CUR + Number(n || 0).toLocaleString('en-IN');
 const when = t => new Date(Number(t)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const hm = t => new Date(Number(t)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+// chat list time: time if today, otherwise the date
+const shortTime = t => { if (!t) return ''; const d = new Date(Number(t)), n = new Date(); return d.toDateString() === n.toDateString() ? hm(t) : when(t); };
+// day label for separators inside a chat
+const dayLabel = t => { const d = new Date(Number(t)), n = new Date(), y = new Date(); y.setDate(n.getDate() - 1);
+  return d.toDateString() === n.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : when(t); };
 // Build a WhatsApp link (10-digit numbers are treated as Indian numbers)
 const waLink = (phone, text) => {
   let d = String(phone || '').replace(/\D/g, '');
@@ -245,7 +251,7 @@ const showOS = items => {
   if (!notifSupported() || Notification.permission !== 'granted' || !items.length) return;
   const last = items[items.length - 1];
   const title = items.length > 1 ? items.length + ' new messages arrived' : 'New message arrived';
-  const opts = { body: last.from + ' · ' + last.title + ': ' + last.text.slice(0, 100), tag: 'sx-' + last.goodId + last.buyerId, renotify: true, icon: '/favicon.ico', data: { url: '/messages' } };
+  const opts = { body: last.from + (last.title ? ' · ' + last.title : '') + ': ' + last.text.slice(0, 100), tag: 'sx-' + last.peerId, renotify: true, icon: '/favicon.ico', data: { url: '/messages' } };
   const fallback = () => { try { new Notification(title, opts); } catch (e) {} };
   try {
     if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) // mobile browsers need a service worker to show notifications
@@ -539,7 +545,8 @@ function ChatChoice({ title, text, waOk, onWA, onApp, close }) {
 function BuyBox({ g, user, reload, openChat }) {
   const [amt, setAmt] = useState(''), [ask, setAsk] = useState(null); // ask: null | 'chat' | 'bid'
   if (g.status !== 'available' || g.own) return null;
-  const chatArgs = { goodId: g.id, buyerId: user.id, title: g.title, withName: g.ownerName };
+  // one chat per person: the chat is with the seller, this listing is only shown as the topic
+  const chatArgs = { peerId: g.ownerId, goodId: g.id, title: g.title, withName: g.ownerName };
   const waOk = !!waLink(g.phone, 'x');
 
   // Chat button: WhatsApp or in-app
@@ -556,7 +563,7 @@ function BuyBox({ g, user, reload, openChat }) {
     const url = how === 'wa' ? waLink(g.phone, 'Hi ' + g.ownerName + ', I have placed a bid of ' + money(amt) + ' for "' + g.title + '" on ' + COMPANY.name + '.') : '';
     const w = url ? window.open('', '_blank') : null; // open now so the browser does not block it
     run(call('bid_place', { goodId: g.id, amount: amt }), 'Bid sent to seller')
-      .then(() => how === 'wa' ? call('chat_send', { goodId: g.id, buyerId: user.id, text: 'Bid of ' + money(amt) + ' placed. I am also reaching out on WhatsApp.' }).catch(() => {}) : null)
+      .then(() => how === 'wa' ? call('chat_send', { peerId: g.ownerId, goodId: g.id, text: 'Bid of ' + money(amt) + ' placed. I am also reaching out on WhatsApp.' }).catch(() => {}) : null)
       .then(() => {
         if (url) { if (w) w.location.href = url; else note('Tap here to open WhatsApp', false, () => window.open(url, '_blank')); }
         setAmt(''); reload();
@@ -769,7 +776,7 @@ function Mine({ openChat, go }) {
             <div><b>{money(b.amount)}</b> <span style={{ color: 'var(--mut)' }}>by {b.bidder}</span><br />{b.kind === 'buy' && <span className="chip warn">Buy request · posted price</span>}<span className="chip">{b.status}</span></div>
             <div className="row">
               {b.status === 'pending' && g.status === 'available' && <><button className="btn ok sm" onClick={() => respond(b.id, true)}>{b.kind === 'buy' ? 'Accept & close deal' : 'Accept'}</button><button className="btn bad sm" onClick={() => respond(b.id, false)}>Decline</button></>}
-              <button className="btn ghost sm" onClick={() => openChat({ goodId: g.id, buyerId: b.bidderId, title: g.title, withName: b.bidder })}>Chat</button></div>
+              <button className="btn ghost sm" onClick={() => openChat({ peerId: b.bidderId, goodId: g.id, title: g.title, withName: b.bidder })}>Chat</button></div>
           </div>))}
           <div className="acts2">
             <button className="btn sm" disabled={g.status === 'sold'} onClick={() => go('edit', g.id)}>✎ Edit</button>
@@ -779,27 +786,74 @@ function Mine({ openChat, go }) {
   </div></div>);
 }
 
-/* ---------- Messages ---------- */
+/* ---------- Messages (WhatsApp style: one chat per person) ----------
+   - the left list has ONE row per person, with the number of unread messages in that chat
+   - opening a chat tells the server to mark everything received from that person as read
+   - the message area has its own scrollbar, so older messages can be scrolled up to
+   - while a chat is open on screen, messages that arrive are marked read straight away (like WhatsApp) */
 function Messages({ thread, setThread }) {
-  const [inbox, setInbox] = useState([]), [msgs, setMsgs] = useState([]), [text, setText] = useState(''), end = useRef();
-  const loadInbox = () => call('chat_inbox').then(setInbox).catch(() => {});
-  const gid = thread ? thread.goodId : '', bid = thread ? thread.buyerId : '';
-  const loadMsgs = useCallback(() => (gid ? call('chat_get', { goodId: gid, buyerId: bid }).then(setMsgs).catch(() => {}) : null), [gid, bid]);
-  useEffect(() => { loadInbox(); const t = setInterval(loadInbox, 8000); return () => clearInterval(t); }, []);
-  const key = thread ? thread.goodId + thread.buyerId : '';
-  useEffect(() => { setMsgs([]); loadMsgs(); const t = setInterval(loadMsgs, 4000); return () => clearInterval(t); }, [key, loadMsgs]);
-  useEffect(() => { end.current && end.current.scrollIntoView(); }, [msgs.length]);
-  const send = () => { if (!text.trim()) return; const t = text; setText('');
-    run(call('chat_send', { goodId: thread.goodId, buyerId: thread.buyerId, text: t })).then(() => { loadMsgs(); loadInbox(); }).catch(() => setText(t)); };
+  const [inbox, setInbox] = useState([]), [msgs, setMsgs] = useState([]), [text, setText] = useState('');
+  const box = useRef(), stick = useRef(true), reading = useRef(false), cur = useRef('');
+  const peer = thread ? thread.peerId : '';
+  cur.current = peer;
+
+  const loadInbox = useCallback(() => call('chat_inbox').then(setInbox).catch(() => {}), []);
+  // tell the server this chat was opened: all messages received from this person become read
+  const markRead = useCallback(() => {
+    if (!peer || reading.current) return;
+    reading.current = true;
+    call('chat_read', { peerId: peer }).then(() => { loadInbox(); window.dispatchEvent(new Event('sx-unread')); })
+      .catch(() => {}).finally(() => { reading.current = false; });
+  }, [peer, loadInbox]);
+  const loadMsgs = useCallback(() => {
+    if (!peer) return null;
+    return call('chat_get', { peerId: peer }).then(l => {
+      if (cur.current !== peer) return; // user already switched to another chat
+      setMsgs(l);
+      if (!document.hidden && l.some(m => !m.mine && !m.read)) markRead();
+    }).catch(() => {});
+  }, [peer, markRead]);
+
+  useEffect(() => { loadInbox(); const t = setInterval(loadInbox, 6000); return () => clearInterval(t); }, [loadInbox]);
+  useEffect(() => {
+    setMsgs([]); stick.current = true; loadMsgs();
+    const t = setInterval(loadMsgs, 3000), vis = () => { if (!document.hidden) loadMsgs(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', vis); };
+  }, [loadMsgs]);
+  // keep the view at the newest message, unless the user has scrolled up to read older ones
+  useEffect(() => { const el = box.current; if (el && stick.current) el.scrollTop = el.scrollHeight; }, [msgs]);
+  const onScroll = e => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; };
+
+  const send = () => {
+    const t = text.trim(); if (!t || !peer) return; setText(''); stick.current = true;
+    run(call('chat_send', { peerId: peer, goodId: thread.goodId || '', text: t })).then(() => { loadMsgs(); loadInbox(); }).catch(() => setText(t));
+  };
+  // a chat opened from a listing may not have any message yet: show it at the top of the list
+  const rows = thread && !inbox.some(t => t.peerId === peer)
+    ? [{ peerId: peer, withName: thread.withName, goodId: thread.goodId, title: thread.title, text: '', last: 0, unread: 0, mine: false }].concat(inbox) : inbox;
+
   return (<div className="page"><div className="wrap"><h2>Messages & bids</h2><div style={{ height: 14 }} />
     <div className="chat">
-      <div className="inbox">{!inbox.length && !thread && <div className="empty" style={{ padding: 20 }}>No conversations yet. Open a listing and press Chat.</div>}
-        {inbox.map(t => <div key={t.goodId + t.buyerId} className={'th' + (key === t.goodId + t.buyerId ? ' on' : '')} onClick={() => setThread(t)}>
-          <b>{t.title}</b><small>{t.withName}: {t.text}</small></div>)}</div>
+      <div className="inbox">{!rows.length && <div className="empty" style={{ padding: 20 }}>No conversations yet. Open a listing and press Chat.</div>}
+        {rows.map(t => <div key={t.peerId} className={'th' + (peer === t.peerId ? ' on' : '') + (t.unread > 0 ? ' unr' : '')}
+          onClick={() => setThread({ peerId: t.peerId, withName: t.withName, goodId: t.goodId, title: t.title })}>
+          <div className="thtop"><b>{t.withName}</b><span className="tm">{shortTime(t.last)}</span></div>
+          <div className="thbot"><small>{t.text ? (t.mine ? 'You: ' : '') + t.text : 'No messages yet'}</small>{t.unread > 0 && <span className="ubadge">{t.unread}</span>}</div></div>)}</div>
       <div className="conv">{!thread ? <div className="empty">Select a conversation</div> : <>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)' }}><b>{thread.title}</b> <span style={{ color: 'var(--mut)', fontSize: 13 }}>· with {thread.withName}</span></div>
-        <div className="msgs">{!msgs.length && <div className="empty" style={{ padding: 20 }}>Say hello 👋 or negotiate the price.</div>}
-          {msgs.map(m => <div key={m.id} className={'m ' + (m.kind === 'sys' || m.kind === 'bid' ? 'sys' : m.mine ? 'me' : '')}>{m.text}<small>{m.kind === 'chat' ? m.name + ' · ' : ''}{hm(m.created)}</small></div>)}<div ref={end} /></div>
+        <div className="chead"><b>{thread.withName}</b>{thread.title && <span> · about {thread.title}</span>}</div>
+        <div className="msgs" ref={box} onScroll={onScroll}>{!msgs.length && <div className="empty" style={{ padding: 20 }}>Say hello 👋 or negotiate the price.</div>}
+          {msgs.map((m, i) => {
+            const p = msgs[i - 1];
+            const newDay = !p || new Date(p.created).toDateString() !== new Date(m.created).toDateString();
+            const newItem = m.title && (!p || p.goodId !== m.goodId);
+            return (<React.Fragment key={m.id}>
+              {newDay && <div className="dsep">{dayLabel(m.created)}</div>}
+              {newItem && <div className="ctx">📦 {m.title}</div>}
+              <div className={'m ' + (m.kind === 'sys' || m.kind === 'bid' ? 'sys' : m.mine ? 'me' : '')}>{m.text}
+                <small>{m.kind === 'chat' && !m.mine ? m.name + ' · ' : ''}{hm(m.created)}{m.mine && m.kind === 'chat' && <span className={'tick' + (m.read ? ' seen' : '')}> {m.read ? '✓✓' : '✓'}</span>}</small></div>
+            </React.Fragment>);
+          })}</div>
         <div className="send"><input className="in" placeholder="Type a message…" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} />
           <button className="btn" onClick={send}>Send</button></div></>}</div>
     </div></div></div>);
@@ -884,15 +938,15 @@ function Builder() {
 
 /* ---------- Chatbot ---------- */
 function Bot() {
-  const [open, setOpen] = useState(false), [t, setT] = useState(''), end = useRef();
+  const [open, setOpen] = useState(false), [t, setT] = useState(''), end = useRef(), box = useRef();
   const [m, setM] = useState([{ b: true, t: 'Hi! I’m the SpareXchange assistant. Try “find motor” or ask how bidding works.' }]);
-  useEffect(() => { end.current && end.current.scrollIntoView(); }, [m, open]);
+  useEffect(() => { const el = box.current; if (el) el.scrollTop = el.scrollHeight; }, [m, open]);
   const send = () => { const x = t.trim(); if (!x) return; setT(''); setM(a => a.concat({ t: x }));
     call('bot', { text: x }).then(r => setM(a => a.concat({ b: true, t: r }))).catch(e => setM(a => a.concat({ b: true, t: e.message }))); };
   return (<>
     <button className="botb" onClick={() => setOpen(!open)} title="Chat assistant">{open ? '✕' : '💬'}</button>
     {open && <div className="bot"><header><span>SpareXchange Assistant</span></header>
-      <div className="msgs">{m.map((x, i) => <div key={i} className={'m' + (x.b ? '' : ' me')}>{x.t}</div>)}<div ref={end} /></div>
+      <div className="msgs" ref={box}>{m.map((x, i) => <div key={i} className={'m' + (x.b ? '' : ' me')}>{x.t}</div>)}<div ref={end} /></div>
       <div className="send"><input className="in" value={t} placeholder="Ask me anything…" onChange={e => setT(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} /><button className="btn sm" onClick={send}>Send</button></div></div>}
   </>);
 }
@@ -902,10 +956,11 @@ const PUBLIC_PAGES = ['home', 'market', 'info', 'contact', 'privacy', 'cookies',
 function App() {
   const [user, setUser] = useState(null), [thread, setThread] = useState(null), [auth, setAuth] = useState(null),
     [toast, setToast] = useState(null), [boot, setBoot] = useState(!!TOKEN), [menu, setMenu] = useState(false), [dd, setDd] = useState(''),
-    [unread, setUnread] = useState(0), [nperm, setNperm] = useState(() => notifSupported() ? Notification.permission : 'unsupported'), [nhide, setNhide] = useState(false),
+    [unread, setUnread] = useState(0), // number of chats that have unread messages (shown on the Messages button)
+    [nperm, setNperm] = useState(() => notifSupported() ? Notification.permission : 'unsupported'), [nhide, setNhide] = useState(false),
     [route, setRoute] = useState(() => { try { return inGS() ? { page: 'home', id: '' } : routeFromPath(window.location.pathname); } catch (e) { return { page: 'home', id: '' }; } }),
-    pending = useRef(null), page = route.page, pageRef = useRef(page), latestRef = useRef(0);
-  pageRef.current = page;
+    pending = useRef(null), page = route.page, pageRef = useRef(page), threadRef = useRef(thread);
+  pageRef.current = page; threadRef.current = thread;
   window.notify = (m, err, fn) => { setToast({ m, err, fn }); setTimeout(() => setToast(null), fn ? 6000 : 3200); };
   const go = (p, id) => {
     setRoute({ page: p, id: id || '' }); setMenu(false); setDd(''); window.scrollTo(0, 0);
@@ -918,35 +973,36 @@ function App() {
   useEffect(() => { if (!boot && !user && PUBLIC_PAGES.indexOf(page) < 0) { pending.current = route; setAuth('login'); go('home'); } }, [boot, user, page]);
   // service worker: lets mobile browsers show the "new message arrived" notification
   useEffect(() => { try { if (!inGS() && 'serviceWorker' in navigator && window.location.protocol === 'https:') navigator.serviceWorker.register('/sw.js').catch(() => {}); } catch (e) {} }, []);
-  // new message check (every few seconds while the site is open): in-app alert, browser notification, unread badge
+  // new message check (every few seconds while the site is open): unread badge, in-app alert, browser notification.
+  // The unread numbers come from the database (Messages.readAt), so they are the same on every device.
   useEffect(() => {
     if (!user) { setUnread(0); return; }
     const K = 'sxn_' + user.id + '_';
     const get = k => { try { const v = localStorage.getItem(K + k); return v === null ? null : Number(v); } catch (e) { return null; } };
     const put = (k, v) => { try { localStorage.setItem(K + k, String(v)); } catch (e) {} };
-    let stop = false, busy = false;
+    let stop = false, busy = false, again = false;
     const tick = () => {
-      if (busy) return; busy = true;
-      call('chat_unread', { since: get('seen'), readAt: get('read') }).then(r => {
+      if (busy) { again = true; return; } busy = true;
+      call('chat_unread', { since: get('seen') }).then(r => {
         if (stop) return;
-        latestRef.current = r.latest;
-        const viewing = pageRef.current === 'messages' && !document.hidden;
-        if (get('read') === null || viewing) { put('read', r.latest); setUnread(0); } else setUnread(r.unread);
-        if (r.items.length && !viewing) {
-          const last = r.items[r.items.length - 1];
-          if (!document.hidden) note((r.items.length > 1 ? r.items.length + ' new messages arrived' : 'New message arrived') + ' – ' + last.from + ': ' + last.text.slice(0, 60), false,
-            () => { setThread({ goodId: last.goodId, buyerId: last.buyerId, title: last.title, withName: last.withName }); go('messages'); });
-          if (document.hidden || !document.hasFocus()) showOS(r.items);
+        setUnread(r.unreadChats);
+        // do not alert for the chat that is open and visible right now
+        const openPeer = pageRef.current === 'messages' && !document.hidden && threadRef.current ? threadRef.current.peerId : '';
+        const fresh = r.items.filter(x => x.peerId !== openPeer);
+        if (fresh.length) {
+          const last = fresh[fresh.length - 1];
+          if (!document.hidden) note((fresh.length > 1 ? fresh.length + ' new messages arrived' : 'New message arrived') + ' – ' + last.from + ': ' + last.text.slice(0, 60), false,
+            () => { setThread({ peerId: last.peerId, goodId: last.goodId, title: last.title, withName: last.withName }); go('messages'); });
+          if (document.hidden || !document.hasFocus()) showOS(fresh);
         }
         put('seen', r.latest);
-      }).catch(() => {}).finally(() => { busy = false; });
+      }).catch(() => {}).finally(() => { busy = false; if (again && !stop) { again = false; tick(); } });
     };
-    tick(); const t = setInterval(tick, 7000);
+    tick(); const t = setInterval(tick, 4000);
     const vis = () => { if (!document.hidden) tick(); }; document.addEventListener('visibilitychange', vis);
-    return () => { stop = true; clearInterval(t); document.removeEventListener('visibilitychange', vis); };
+    window.addEventListener('sx-unread', tick); // the Messages page fires this right after a chat is marked as read
+    return () => { stop = true; clearInterval(t); document.removeEventListener('visibilitychange', vis); window.removeEventListener('sx-unread', tick); };
   }, [user]);
-  // opening Messages marks everything as read
-  useEffect(() => { if (user && page === 'messages') { try { localStorage.setItem('sxn_' + user.id + '_read', String(latestRef.current)); } catch (e) {} setUnread(0); } }, [page, user]);
   useEffect(() => { document.title = unread > 0 ? '(' + unread + ') New message · SpareXchange' : BASE_TITLE; }, [unread]);
   const enableNotif = () => { if (!notifSupported()) return; Notification.requestPermission().then(p => { setNperm(p); if (p === 'granted') note('Notifications are on. You will be alerted when a new message arrives.'); }).catch(() => {}); };
   const done = r => { setTok(r.token); setUser(r.user); setAuth(null); const p = pending.current; pending.current = null; p ? go(p.page, p.id) : go('market'); note('Welcome, ' + r.user.name); };
@@ -973,6 +1029,7 @@ function App() {
   return (<div className="app-shell">
     <header className="hdr"><div className="wrap">
       <div className="logo" onClick={() => go('home')}>SPARE<b>XCHANGE</b></div>
+      {user && <button className="msgb" aria-label="Messages" title="Messages" onClick={() => go('messages')}>💬{unread > 0 && <span className="dot">{unread > 99 ? '99+' : unread}</span>}</button>}
       <button className="burger" aria-label="Menu" aria-expanded={menu} onClick={e => { e.stopPropagation(); setMenu(!menu); }}>{menu ? '✕' : '☰'}{!menu && unread > 0 && <span className="dot" />}</button>
       <div className={'menu' + (menu ? ' open' : '')}>
         <nav className="nav">
@@ -997,4 +1054,3 @@ function App() {
 }
 
 export default App;
-
