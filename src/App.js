@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import './App.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://script.google.com/macros/s/AKfycbzA0UOLsCd4GNc-vEL3x8mk3WUSwPepocY0wnCCAsoKSU8dW87rjuCO3fwDO06Cx_42AQ/exec';
+const API_URL = process.env.REACT_APP_API_URL || 'https://script.google.com/macros/s/AKfycbxlHMPLSQqZG-JGFaNZ3zQ9iAo2a1qECSW-GSsR7tPnYB-o8qFWLsa_ASqTR0JN7MQG-g/exec';
 const CUR = '₹';
 const COMPANY = { name: 'SpareXchange', email: 'support@sparexchange.com' };
 const DEV = { name: 'Shree Shyam IT Solutions', email: 'itsolutionsshreeshyam@gmail.com', site: 'https://shree-shyam-it-solutions.vercel.app/' };
@@ -604,6 +604,8 @@ function Item({ id, user, go, openChat }) {
   const [g, setG] = useState(null), [err, setErr] = useState('');
   const load = useCallback(() => call('goods_get', { id }).then(setG).catch(e => setErr(e.message)), [id]);
   useEffect(() => { setG(null); setErr(''); load(); }, [load]);
+  // refresh this page after the chatbot places a bid or buy request
+  useEffect(() => { window.addEventListener('sx-bid', load); return () => window.removeEventListener('sx-bid', load); }, [load]);
   const back = <button className="btn ghost sm" onClick={() => go('market')}>← Back to marketplace</button>;
   if (err) return <div className="page"><div className="wrap">{back}<div className="empty">{err}</div></div></div>;
   if (!g) return <div className="page"><div className="wrap empty">Loading…</div></div>;
@@ -936,18 +938,83 @@ function Builder() {
   </div></div>);
 }
 
-/* ---------- Chatbot ---------- */
-function Bot() {
-  const [open, setOpen] = useState(false), [t, setT] = useState(''), end = useRef(), box = useRef();
-  const [m, setM] = useState([{ b: true, t: 'Hi! I’m the SpareXchange assistant. Try “find motor” or ask how bidding works.' }]);
-  useEffect(() => { const el = box.current; if (el) el.scrollTop = el.scrollHeight; }, [m, open]);
-  const send = () => { const x = t.trim(); if (!x) return; setT(''); setM(a => a.concat({ t: x }));
-    call('bot', { text: x }).then(r => setM(a => a.concat({ b: true, t: r }))).catch(e => setM(a => a.concat({ b: true, t: e.message }))); };
+/* ---------- Chatbot (smart assistant) ---------- */
+const BOT_HELLO = { b: true, t: 'Hi! 👋 I am the SpareXchange assistant.\nType any product name (like “motor” or “SKF 6208”) and I will show it.\nThen say “open first”, “bid 5000”, “buy it” or “chat with seller”.', chips: ['Latest listings', 'Categories', 'Find motor', 'How do I bid?'] };
+
+function BotCard({ p, onOpen, onAsk }) {
+  return (<div className="bcard">
+    {p.image ? <img src={p.image} alt="" loading="lazy" onClick={() => onOpen(p.id)} /> : <div className="bimg" onClick={() => onOpen(p.id)}>📦</div>}
+    <div className="binfo">
+      <b onClick={() => onOpen(p.id)}>{p.title}</b>
+      <small>{p.category} · {p.condition} · Qty {p.qty}</small>
+      {p.price !== undefined ? <div className="bprice">{money(p.price)}{p.location ? <span> · {p.location}</span> : null}</div> : <div className="bprice lk">🔒 Sign in to see price</div>}
+      <div className="bbtns">
+        <button onClick={() => onOpen(p.id)}>Open</button>
+        {!p.own && <><button onClick={() => onAsk('bid', p.id, 'Bid on ' + p.title)}>Bid</button>
+          <button onClick={() => onAsk('buy', p.id, 'Buy ' + p.title)}>Buy</button>
+          <button onClick={() => onAsk('chat with seller', p.id, 'Chat with seller of ' + p.title)}>Chat</button></>}
+      </div>
+    </div></div>);
+}
+
+function Bot({ user, page, routeId, go, openChat, openAuth }) {
+  const [open, setOpen] = useState(false), [t, setT] = useState(''), [wait, setWait] = useState(false), [done, setDone] = useState({}), [m, setM] = useState([BOT_HELLO]), box = useRef();
+  const st = useRef({ shown: [], focus: '', awaiting: null }); // what the bot remembers: products shown, selected product, pending question
+  const push = x => setM(a => a.concat(x));
+  const say = (text, actions) => push({ b: true, t: text, actions: actions || [] });
+  const small = () => window.innerWidth < 700;
+  useEffect(() => { const el = box.current; if (el) el.scrollTop = el.scrollHeight; }, [m, open, wait]);
+
+  // run an action (from a button, or automatically from the bot's answer)
+  const exec = a => {
+    if (!a) return;
+    if (a.type === 'open') { st.current.focus = a.id; go('item', a.id); if (small()) setOpen(false); }
+    else if (a.type === 'nav') { go(a.to, a.id); if (small()) setOpen(false); }
+    else if (a.type === 'close') setOpen(false);
+    else if (a.type === 'login') openAuth('login');
+    else if (a.type === 'chat') { openChat({ peerId: a.peerId, goodId: a.goodId, title: a.title, withName: a.withName }); if (small()) setOpen(false); }
+    else if (a.type === 'say') ask(a.text, '', a.label);
+    else if (a.type === 'bid' || a.type === 'buy') {
+      const isBid = a.type === 'bid'; st.current.focus = a.id;
+      run(call(isBid ? 'bid_place' : 'buy', isBid ? { goodId: a.id, amount: a.amount } : { goodId: a.id }), isBid ? 'Bid sent to seller' : 'Buy request sent to the seller')
+        .then(() => { window.dispatchEvent(new Event('sx-bid'));
+          say(isBid ? '✅ Done! Your bid of ' + money(a.amount) + ' was sent to the seller.' : '✅ Buy request sent at the posted price. The seller will confirm and close the deal.',
+            [{ type: 'say', text: 'chat with seller', label: '💬 Chat with seller' }]); })
+        .catch(e => say('⚠️ ' + e.message));
+    }
+  };
+  const ask = (text, focus, label) => {
+    const x = String(text || '').trim(); if (!x || wait) return;
+    setT(''); push({ t: label || x }); setWait(true);
+    const c = st.current;
+    call('bot', { text: x, ctx: { shown: c.shown, focus: focus || (page === 'item' ? routeId : c.focus), awaiting: c.awaiting, page } })
+      .then(r => {
+        if (typeof r === 'string') r = { text: r };
+        if (r.shown) c.shown = r.shown;
+        if (r.focus !== undefined) c.focus = r.focus;
+        c.awaiting = r.awaiting || null;
+        push({ b: true, t: r.text, products: r.products || [], actions: r.actions || [], chips: r.chips || [] });
+        if (r.auto) setTimeout(() => exec(r.auto), 300);
+      })
+      .catch(e => say(e.message))
+      .finally(() => setWait(false));
+  };
+  const reset = () => { setM([BOT_HELLO]); setDone({}); st.current = { shown: [], focus: '', awaiting: null }; };
+  const click = (a, key) => { if (a.type === 'bid' || a.type === 'buy') setDone(d => ({ ...d, [key]: 1 })); exec(a); };
+
   return (<>
     <button className="botb" onClick={() => setOpen(!open)} title="Chat assistant">{open ? '✕' : '💬'}</button>
-    {open && <div className="bot"><header><span>SpareXchange Assistant</span></header>
-      <div className="msgs" ref={box}>{m.map((x, i) => <div key={i} className={'m' + (x.b ? '' : ' me')}>{x.t}</div>)}<div ref={end} /></div>
-      <div className="send"><input className="in" value={t} placeholder="Ask me anything…" onChange={e => setT(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} /><button className="btn sm" onClick={send}>Send</button></div></div>}
+    {open && <div className="bot"><header><span>🤖 SpareXchange Assistant</span><button className="bx" onClick={reset} title="New conversation">↺</button></header>
+      <div className="msgs" ref={box}>
+        {m.map((x, i) => (<div key={i} className={'bw' + (x.b ? '' : ' me')}>
+          <div className={'m' + (x.b ? '' : ' me')}>{x.t}</div>
+          {x.products && x.products.length > 0 && <div className="bprods">{x.products.map(p => <BotCard key={p.id} p={p} onOpen={id => exec({ type: 'open', id })} onAsk={ask} />)}</div>}
+          {x.actions && x.actions.length > 0 && <div className="bacts">{x.actions.map((a, j) => <button key={j} className="bchip act" disabled={!!done[i + '-' + j]} onClick={() => click(a, i + '-' + j)}>{done[i + '-' + j] ? 'Done ✓' : a.label}</button>)}</div>}
+          {x.chips && x.chips.length > 0 && i === m.length - 1 && <div className="bacts">{x.chips.map(c => <button key={c} className="bchip" onClick={() => ask(c)}>{c}</button>)}</div>}
+        </div>))}
+        {wait && <div className="bw"><div className="m typing"><i /><i /><i /></div></div>}
+      </div>
+      <div className="send"><input className="in" value={t} placeholder="Type a product name or ask…" onChange={e => setT(e.target.value)} onKeyDown={e => e.key === 'Enter' && ask(t)} /><button className="btn sm" onClick={() => ask(t)}>Send</button></div></div>}
   </>);
 }
 
@@ -1048,7 +1115,7 @@ function App() {
     <main className="main">{view}</main>
     <Foot go={go} links={footLinks} />
     {auth && <AuthModal mode={auth} setMode={setAuth} onDone={done} close={() => setAuth(null)} />}
-    <Bot />
+    <Bot user={user} page={page} routeId={route.id} go={go} openChat={openChat} openAuth={setAuth} />
     {toast && <div className={'toast' + (toast.err ? ' err' : '')} style={toast.fn ? { cursor: 'pointer' } : null} onClick={() => { const fn = toast.fn; setToast(null); if (fn) fn(); }}>{toast.m}</div>}
   </div>);
 }
