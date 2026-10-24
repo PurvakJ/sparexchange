@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import './App.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://script.google.com/macros/s/AKfycbxlHMPLSQqZG-JGFaNZ3zQ9iAo2a1qECSW-GSsR7tPnYB-o8qFWLsa_ASqTR0JN7MQG-g/exec';
+const API_URL = process.env.REACT_APP_API_URL || 'https://script.google.com/macros/s/AKfycbxU7KOBHDUCCR2fmuPQo3WrxhP4UcApvrMtkl5T-j1Rj1XJPzGuznScD3DiMZKP2bRTKw/exec';
 const CUR = '₹';
 const COMPANY = { name: 'SpareXchange', email: 'support@sparexchange.com' };
 const DEV = { name: 'Shree Shyam IT Solutions', email: 'itsolutionsshreeshyam@gmail.com', site: 'https://shree-shyam-it-solutions.vercel.app/' };
@@ -726,7 +726,13 @@ function Bulk({ form, go, back }) {
 
 /* ---------- Post excess goods: single or bulk (dynamic form from admin) ---------- */
 function Post({ go, editId }) {
-  const [mode, setMode] = useState('choose'), [form, setForm] = useState(null), [cat, setCat] = useState(''), [v, setV] = useState({}), [busy, setBusy] = useState(false), [imgs, setImgs] = useState([]);
+  const pf0 = window.sxPrefill || null; // details typed in the chatbot ("Sell by chat")
+  const [mode, setMode] = useState(pf0 ? 'single' : 'choose'), [form, setForm] = useState(null), [cat, setCat] = useState((pf0 && pf0.category) || ''), [v, setV] = useState((pf0 && pf0.values) || {}), [busy, setBusy] = useState(false), [imgs, setImgs] = useState([]);
+  useEffect(() => {
+    window.sxPrefill = null;
+    const f = () => { const x = window.sxPrefill; if (!x) return; window.sxPrefill = null; setMode('single'); setCat(x.category || ''); setV(x.values || {}); setImgs([]); };
+    window.addEventListener('sx-prefill', f); return () => window.removeEventListener('sx-prefill', f);
+  }, []);
   useEffect(() => {
     call('form_get').then(setForm).catch(e => note(e.message, true));
     if (editId) call('goods_get', { id: editId }).then(g => { setCat(g.category === 'General' ? '' : g.category); setV({ ...g.data, title: g.title, qty: g.qty, condition: g.condition, price: g.price }); setImgs(g.defaultImg ? [] : (g.images || [])); }).catch(e => note(e.message, true));
@@ -763,6 +769,7 @@ function Mine({ openChat, go }) {
   const [list, setList] = useState(null);
   const load = () => call('goods_mine').then(setList).catch(e => note(e.message, true));
   useEffect(() => { load(); }, []);
+  useEffect(() => { window.addEventListener('sx-bid', load); return () => window.removeEventListener('sx-bid', load); }, []);
   const respond = (bidId, accept) => run(call('bid_respond', { bidId, accept }), accept ? 'Accepted – deal closed' : 'Declined').then(load).catch(() => {});
   const rm = id => window.confirm('Delete this listing?') && run(call('goods_delete', { id }), 'Deleted').then(load).catch(() => {});
   return (<div className="page"><div className="wrap"><h2>My listings</h2>
@@ -938,8 +945,16 @@ function Builder() {
   </div></div>);
 }
 
-/* ---------- Chatbot (smart assistant) ---------- */
-const BOT_HELLO = { b: true, t: 'Hi! 👋 I am the SpareXchange assistant.\nType any product name (like “motor” or “SKF 6208”) and I will show it.\nThen say “open first”, “bid 5000”, “buy it” or “chat with seller”.', chips: ['Latest listings', 'Categories', 'Find motor', 'How do I bid?'] };
+/* ---------- Chatbot (smart assistant v2) ----------
+   - remembers the conversation and what it showed (sessionStorage), so a refresh does not wipe it
+   - product cards, side-by-side compare, thumbs up/down, undo after a bid, voice input
+   - seller actions (accept / decline / pause), alerts ("notify me when ..."), guided posting (prefills the form)
+   - continues a request after the visitor signs in, minimises instead of closing when it opens a page */
+const BOT_KEY = 'sx_bot_v2';
+const BOT_HELLO = { b: true, t: 'Hi! 👋 I am the SpareXchange assistant.\nType any product name (like “motor”, “SKF 6208” or “pumps under 50k”) and I will show it.\nThen say “open first”, “bid 5000”, “buy it” or “chat with seller”. You can also tap 🎤 and speak.', chips: ['Latest listings', 'Categories', 'Find motor', 'How do I bid?'] };
+const botSaved = () => { try { return JSON.parse(sessionStorage.getItem(BOT_KEY)) || null; } catch (e) { return null; } };
+const BOT_ACT = ['bid', 'buy', 'respond', 'status', 'alert', 'alert_del', 'undo'];
+const SpeechRec = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 
 function BotCard({ p, onOpen, onAsk }) {
   return (<div className="bcard">
@@ -947,7 +962,7 @@ function BotCard({ p, onOpen, onAsk }) {
     <div className="binfo">
       <b onClick={() => onOpen(p.id)}>{p.title}</b>
       <small>{p.category} · {p.condition} · Qty {p.qty}</small>
-      {p.price !== undefined ? <div className="bprice">{money(p.price)}{p.location ? <span> · {p.location}</span> : null}</div> : <div className="bprice lk">🔒 Sign in to see price</div>}
+      {p.price !== undefined ? <div className="bprice">{money(p.price)}{p.location ? <span> · {p.location}</span> : null}{p.bids > 0 ? <span> · {p.bids} bid{p.bids > 1 ? 's' : ''}</span> : null}</div> : <div className="bprice lk">🔒 Sign in to see price</div>}
       <div className="bbtns">
         <button onClick={() => onOpen(p.id)}>Open</button>
         {!p.own && <><button onClick={() => onAsk('bid', p.id, 'Bid on ' + p.title)}>Bid</button>
@@ -957,64 +972,144 @@ function BotCard({ p, onOpen, onAsk }) {
     </div></div>);
 }
 
+function BotCompare({ items, onOpen }) {
+  const rows = [['Price', p => p.price !== undefined ? money(p.price) : '–'], ['Quantity', p => p.qty], ['Condition', p => p.condition], ['Category', p => p.category],
+    ['Location', p => p.location || '–'], ['Seller', p => p.seller || '–'], ['Pending bids', p => p.bids || 0]];
+  const prices = items.map(p => p.price).filter(x => x > 0), best = prices.length ? Math.min.apply(null, prices) : -1;
+  return (<div className="bcmp"><table><thead><tr><th />{items.map(p => <th key={p.id}>{p.title}</th>)}</tr></thead>
+    <tbody>{rows.map(r => <tr key={r[0]}><td><b>{r[0]}</b></td>{items.map(p => <td key={p.id} className={r[0] === 'Price' && p.price === best && items.length > 1 ? 'best' : ''}>{r[1](p)}</td>)}</tr>)}
+      <tr><td />{items.map(p => <td key={p.id}><button onClick={() => onOpen(p.id)}>Open</button></td>)}</tr></tbody></table></div>);
+}
+
 function Bot({ user, page, routeId, go, openChat, openAuth }) {
-  const [open, setOpen] = useState(false), [t, setT] = useState(''), [wait, setWait] = useState(false), [done, setDone] = useState({}), [m, setM] = useState([BOT_HELLO]), box = useRef();
-  const st = useRef({ shown: [], focus: '', awaiting: null }); // what the bot remembers: products shown, selected product, pending question
-  const push = x => setM(a => a.concat(x));
+  const saved = useRef(botSaved()).current;
+  const [open, setOpen] = useState(false), [t, setT] = useState(''), [wait, setWait] = useState(false), [listen, setListen] = useState(false),
+    [done, setDone] = useState((saved && saved.done) || {}), [m, setM] = useState(saved && saved.m && saved.m.length ? saved.m : [BOT_HELLO]),
+    [dot, setDot] = useState(false), [min, setMin] = useState(false), [hint, setHint] = useState(false);
+  // what the bot remembers: products shown, selected product, pending question, last search, request to continue after sign-in
+  const st = useRef(saved && saved.st ? saved.st : { shown: [], focus: '', awaiting: null, query: null, resume: '' });
+  const box = useRef(), inp = useRef(), rec = useRef();
+  const push = x => setM(a => a.concat(Object.assign({ id: Date.now() + '-' + Math.random().toString(16).slice(2, 6) }, x)).slice(-60));
   const say = (text, actions) => push({ b: true, t: text, actions: actions || [] });
   const small = () => window.innerWidth < 700;
+  const closeSmall = () => { if (small()) { setOpen(false); setMin(true); } }; // minimise on phones so one tap brings the chat back
+  const openBot = () => { setOpen(true); setDot(false); setMin(false); closeHint(); };
+  const closeHint = () => { setHint(false); try { localStorage.setItem('sx_bot_hint', '1'); } catch (e) {} };
+
+  useEffect(() => { try { sessionStorage.setItem(BOT_KEY, JSON.stringify({ m: m, done: done, st: st.current })); } catch (e) {} }, [m, done]);
   useEffect(() => { const el = box.current; if (el) el.scrollTop = el.scrollHeight; }, [m, open, wait]);
+  useEffect(() => { if (open && !wait && inp.current && window.innerWidth > 700) inp.current.focus(); }, [open, wait, m.length]);
+  useEffect(() => { if (!open) return; const f = e => { if (e.key === 'Escape') setOpen(false); }; document.addEventListener('keydown', f); return () => document.removeEventListener('keydown', f); }, [open]);
+  // one-time friendly hint
+  useEffect(() => { let seen = false; try { seen = !!localStorage.getItem('sx_bot_hint'); } catch (e) {} if (seen) return; const tm = setTimeout(() => setHint(true), 6000); return () => clearTimeout(tm); }, []);
 
   // run an action (from a button, or automatically from the bot's answer)
   const exec = a => {
     if (!a) return;
-    if (a.type === 'open') { st.current.focus = a.id; go('item', a.id); if (small()) setOpen(false); }
-    else if (a.type === 'nav') { go(a.to, a.id); if (small()) setOpen(false); }
-    else if (a.type === 'close') setOpen(false);
-    else if (a.type === 'login') openAuth('login');
-    else if (a.type === 'chat') { openChat({ peerId: a.peerId, goodId: a.goodId, title: a.title, withName: a.withName }); if (small()) setOpen(false); }
-    else if (a.type === 'say') ask(a.text, '', a.label);
-    else if (a.type === 'bid' || a.type === 'buy') {
-      const isBid = a.type === 'bid'; st.current.focus = a.id;
+    const T = a.type;
+    if (T === 'open') { st.current.focus = a.id; go('item', a.id); closeSmall(); }
+    else if (T === 'nav') { go(a.to, a.id); closeSmall(); }
+    else if (T === 'close') setOpen(false);
+    else if (T === 'login') openAuth('login');
+    else if (T === 'chat') { openChat({ peerId: a.peerId, goodId: a.goodId, title: a.title, withName: a.withName }); closeSmall(); }
+    else if (T === 'prefill') { window.sxPrefill = a.data; go('post'); setTimeout(() => window.dispatchEvent(new Event('sx-prefill')), 80); closeSmall(); }
+    else if (T === 'say') ask(a.text, '', a.label);
+    else if (T === 'bid' || T === 'buy') {
+      const isBid = T === 'bid'; st.current.focus = a.id;
       run(call(isBid ? 'bid_place' : 'buy', isBid ? { goodId: a.id, amount: a.amount } : { goodId: a.id }), isBid ? 'Bid sent to seller' : 'Buy request sent to the seller')
-        .then(() => { window.dispatchEvent(new Event('sx-bid'));
+        .then(r => { window.dispatchEvent(new Event('sx-bid'));
           say(isBid ? '✅ Done! Your bid of ' + money(a.amount) + ' was sent to the seller.' : '✅ Buy request sent at the posted price. The seller will confirm and close the deal.',
-            [{ type: 'say', text: 'chat with seller', label: '💬 Chat with seller' }]); })
+            [{ type: 'say', text: 'chat with seller', label: '💬 Chat with seller' }].concat(r && r.id ? [{ type: 'undo', bidId: r.id, label: '↩ Undo (withdraw)' }] : [])); })
         .catch(e => say('⚠️ ' + e.message));
     }
+    else if (T === 'undo') run(call('bid_cancel', { bidId: a.bidId }), 'Withdrawn').then(() => { window.dispatchEvent(new Event('sx-bid')); say('↩ Withdrawn. The seller was told the bid was cancelled.'); }).catch(e => say('⚠️ ' + e.message));
+    else if (T === 'respond') run(call('bid_respond', { bidId: a.bidId, accept: a.accept }), a.accept ? 'Accepted – deal closed' : 'Declined')
+      .then(() => { window.dispatchEvent(new Event('sx-bid')); say(a.accept ? '✅ Accepted. The deal is recorded in Orders.' : '✖ Declined.', a.accept ? [{ type: 'nav', to: 'orders', label: 'Open Orders' }] : []); }).catch(e => say('⚠️ ' + e.message));
+    else if (T === 'status') run(call('goods_status', { id: a.id, status: a.status }), a.status === 'paused' ? 'Listing paused' : 'Listing resumed')
+      .then(() => { window.dispatchEvent(new Event('sx-bid')); say(a.status === 'paused' ? '⏸ Paused. Say “resume” to publish it again.' : '▶ Resumed. It is visible to buyers again.', [{ type: 'nav', to: 'mine', label: 'Open My listings' }]); }).catch(e => say('⚠️ ' + e.message));
+    else if (T === 'alert') run(call('alert_save', { query: a.query, filters: a.filters || {} }), 'Alert saved')
+      .then(() => say('🔔 Alert saved. I will tell you here when a matching listing appears while SpareXchange is open. Say “my alerts” to manage them.')).catch(e => say('⚠️ ' + e.message));
+    else if (T === 'alert_del') run(call('alert_del', { id: a.id }), 'Alert removed').then(() => say('🗑 Alert removed.')).catch(e => say('⚠️ ' + e.message));
   };
+  // one retry on network trouble
+  const callBot = payload => call('bot', payload).catch(e => /too fast/.test(e.message) ? Promise.reject(e) : new Promise(r => setTimeout(r, 900)).then(() => call('bot', payload)));
   const ask = (text, focus, label) => {
     const x = String(text || '').trim(); if (!x || wait) return;
     setT(''); push({ t: label || x }); setWait(true);
     const c = st.current;
-    call('bot', { text: x, ctx: { shown: c.shown, focus: focus || (page === 'item' ? routeId : c.focus), awaiting: c.awaiting, page } })
+    callBot({ text: x, ctx: { shown: c.shown, focus: focus || (page === 'item' ? routeId : c.focus), awaiting: c.awaiting, page, query: c.query } })
       .then(r => {
         if (typeof r === 'string') r = { text: r };
         if (r.shown) c.shown = r.shown;
         if (r.focus !== undefined) c.focus = r.focus;
+        if (r.query) c.query = r.query;
         c.awaiting = r.awaiting || null;
-        push({ b: true, t: r.text, products: r.products || [], actions: r.actions || [], chips: r.chips || [] });
+        if (r.resume) c.resume = r.resume;
+        push({ b: true, t: r.text, products: r.products || [], compare: r.compare || null, actions: r.actions || [], chips: r.chips || [], fb: true, q: x });
         if (r.auto) setTimeout(() => exec(r.auto), 300);
       })
-      .catch(e => say(e.message))
+      .catch(e => say(/fetch|network|load failed/i.test(e.message) ? 'I could not reach the server. Please check your connection and try again.' : e.message))
       .finally(() => setWait(false));
   };
-  const reset = () => { setM([BOT_HELLO]); setDone({}); st.current = { shown: [], focus: '', awaiting: null }; };
-  const click = (a, key) => { if (a.type === 'bid' || a.type === 'buy') setDone(d => ({ ...d, [key]: 1 })); exec(a); };
+  const reset = () => { setM([BOT_HELLO]); setDone({}); st.current = { shown: [], focus: '', awaiting: null, query: null, resume: '' }; try { sessionStorage.removeItem(BOT_KEY); } catch (e) {} };
+  const click = (a, key) => {
+    if (a.confirmText && !window.confirm(a.confirmText)) return;
+    if (BOT_ACT.indexOf(a.type) > -1) setDone(d => ({ ...d, [key]: 1 }));
+    exec(a);
+  };
+  const rate = (id, up) => {
+    const x = m.filter(y => y.id === id)[0]; if (!x || x.rated) return;
+    setM(a => a.map(y => y.id === id ? { ...y, rated: up ? 1 : -1 } : y));
+    call('bot_feedback', { text: x.q, answer: x.t, up: up }).catch(() => {});
+  };
+  const mic = () => {
+    if (!SpeechRec) return note('Voice input is not supported in this browser.', true);
+    if (listen && rec.current) { rec.current.stop(); return; }
+    const r = new SpeechRec(); r.lang = 'en-IN'; r.interimResults = false;
+    r.onresult = e => { const x = e.results[0][0].transcript; setT(x); ask(x); };
+    r.onend = () => setListen(false); r.onerror = () => setListen(false);
+    rec.current = r; setListen(true); try { r.start(); } catch (e) { setListen(false); }
+  };
+
+  // a visitor asked for something that needs an account: after sign-in, carry on with that request
+  useEffect(() => {
+    if (user && st.current.resume) { const x = st.current.resume; st.current.resume = ''; setOpen(true); setMin(false); say('✅ Signed in. Continuing with “' + x + '”'); ask(x); }
+  }, [user]);
+  // alerts: every minute look for new listings that match the user's saved alerts
+  useEffect(() => {
+    if (!user) return;
+    const K = 'sxa_' + user.id; let stop = false;
+    const get = () => { try { const v = localStorage.getItem(K); return v === null ? null : Number(v); } catch (e) { return null; } };
+    const check = () => call('alerts_check', { since: get() }).then(r => {
+      if (stop) return;
+      try { localStorage.setItem(K, String(r.latest)); } catch (e) {}
+      r.items.forEach(it => { st.current.shown = it.goods.map(g => g.id); push({ b: true, t: '🔔 New listing matches your alert “' + it.query + '”:', products: it.goods, actions: [], chips: [] }); });
+      if (r.items.length) { setDot(true); note('🔔 New listing for your alert “' + r.items[0].query + '”. Tap to open the assistant.', false, openBot); }
+    }).catch(() => {});
+    check(); const tm = setInterval(check, 60000);
+    return () => { stop = true; clearInterval(tm); };
+  }, [user]);
 
   return (<>
-    <button className="botb" onClick={() => setOpen(!open)} title="Chat assistant">{open ? '✕' : '💬'}</button>
-    {open && <div className="bot"><header><span>🤖 SpareXchange Assistant</span><button className="bx" onClick={reset} title="New conversation">↺</button></header>
-      <div className="msgs" ref={box}>
-        {m.map((x, i) => (<div key={i} className={'bw' + (x.b ? '' : ' me')}>
+    {hint && !open && <div className="bhint" role="status"><span onClick={openBot}>👋 Need help finding a part? Ask me!</span><button aria-label="Dismiss" onClick={closeHint}>✕</button></div>}
+    {!open && min && <button className="botback" onClick={openBot}>↩ Back to chat</button>}
+    <button className={'botb' + (open ? ' on' : '')} onClick={() => open ? setOpen(false) : openBot()} title="Chat assistant" aria-label={open ? 'Close assistant' : 'Open assistant'}>{open ? '✕' : '💬'}{dot && !open && <span className="botdot" />}</button>
+    {open && <div className="bot" role="dialog" aria-label="SpareXchange assistant"><header><span>🤖 SpareXchange Assistant</span>
+      <span className="hbtn"><button className="bx" onClick={reset} title="New conversation" aria-label="New conversation">↺</button><button className="bx" onClick={() => setOpen(false)} aria-label="Close assistant">✕</button></span></header>
+      <div className="msgs" ref={box} role="log" aria-live="polite">
+        {m.map((x, i) => { const mid = x.id || 'h' + i; return (<div key={mid} className={'bw' + (x.b ? '' : ' me')}>
           <div className={'m' + (x.b ? '' : ' me')}>{x.t}</div>
           {x.products && x.products.length > 0 && <div className="bprods">{x.products.map(p => <BotCard key={p.id} p={p} onOpen={id => exec({ type: 'open', id })} onAsk={ask} />)}</div>}
-          {x.actions && x.actions.length > 0 && <div className="bacts">{x.actions.map((a, j) => <button key={j} className="bchip act" disabled={!!done[i + '-' + j]} onClick={() => click(a, i + '-' + j)}>{done[i + '-' + j] ? 'Done ✓' : a.label}</button>)}</div>}
+          {x.compare && x.compare.length > 1 && <BotCompare items={x.compare} onOpen={id => exec({ type: 'open', id })} />}
+          {x.actions && x.actions.length > 0 && <div className="bacts">{x.actions.map((a, j) => <button key={j} className="bchip act" disabled={!!done[mid + '-' + j]} onClick={() => click(a, mid + '-' + j)}>{done[mid + '-' + j] ? 'Done ✓' : a.label}</button>)}</div>}
           {x.chips && x.chips.length > 0 && i === m.length - 1 && <div className="bacts">{x.chips.map(c => <button key={c} className="bchip" onClick={() => ask(c)}>{c}</button>)}</div>}
-        </div>))}
-        {wait && <div className="bw"><div className="m typing"><i /><i /><i /></div></div>}
+          {x.fb && x.q && <div className="bfb">{x.rated ? <span>{x.rated > 0 ? 'Thanks for the feedback!' : 'Thanks, I will try to improve.'}</span> : <><button aria-label="Helpful answer" onClick={() => rate(mid, true)}>👍</button><button aria-label="Not helpful" onClick={() => rate(mid, false)}>👎</button></>}</div>}
+        </div>); })}
+        {wait && <div className="bw"><div className="m typing" aria-label="Searching"><i /><i /><i /><span>Searching…</span></div></div>}
       </div>
-      <div className="send"><input className="in" value={t} placeholder="Type a product name or ask…" onChange={e => setT(e.target.value)} onKeyDown={e => e.key === 'Enter' && ask(t)} /><button className="btn sm" onClick={() => ask(t)}>Send</button></div></div>}
+      <div className="send"><input ref={inp} className="in" value={t} placeholder="Type a product name or ask…" aria-label="Message" onChange={e => setT(e.target.value)} onKeyDown={e => e.key === 'Enter' && ask(t)} />
+        {SpeechRec && <button className={'bmic' + (listen ? ' on' : '')} aria-label="Voice input" title="Speak" onClick={mic}>🎤</button>}
+        <button className="btn sm" onClick={() => ask(t)}>Send</button></div></div>}
   </>);
 }
 
